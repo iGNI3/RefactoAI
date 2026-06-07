@@ -1,0 +1,3 @@
+# This directory is the sandboxed execution workspace.
+# PatchPilot applies and verifies code modifications here.
+# Do not place production files in this directory.

@@ -1,0 +1,27 @@
+# ── Web Framework ──────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+websockets>=15.0
+python-dotenv>=1.1.0
+
+# ── LangChain Ecosystem ───────────────────────────────────
+langchain-core>=0.3.0
+langchain-openai>=0.3.0
+langchain-anthropic>=0.3.0
+langchain-google-genai>=2.1.0
+langchain-community>=0.3.0
+
+# ── MCP Integration ───────────────────────────────────────
+mcp>=1.9.0
+langchain-mcp-adapters>=0.1.0
+
+# ── AST Parsing ───────────────────────────────────────────
+tree-sitter>=0.24.0
+tree-sitter-python>=0.23.0
+
+# ── Vector Store ──────────────────────────────────────────
+chromadb>=1.0.0
+
+# ── Utilities ─────────────────────────────────────────────
+pydantic>=2.11.0
+pydantic-settings>=2.9.0
