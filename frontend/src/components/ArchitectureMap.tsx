@@ -18,8 +18,8 @@ interface ASTNode {
   metadata: {
     source_file: string;
     node_type: string;
-    start_line: number;
-    end_line: number;
+    symbol_name?: string;
+    symbol_type?: string;
   };
 }
 
@@ -35,8 +35,8 @@ const FileNodeComponent = ({ data }: { data: any }) => {
       <div className="p-2 flex flex-col gap-1 max-h-40 overflow-y-auto">
         {data.chunks.map((c: any, i: number) => (
           <div key={i} className="flex items-center gap-2 text-[11px] opacity-70 bg-black/5 p-1 rounded">
-            {c.node_type === "function_definition" ? <FunctionSquare size={12} className="text-amber-500" /> : <Brackets size={12} />}
-            <span className="truncate">L{c.start_line}-{c.end_line}: {c.node_type}</span>
+            {c.symbol_type === "function_definition" || c.node_type === "function_definition" ? <FunctionSquare size={12} className="text-amber-500" /> : <Brackets size={12} />}
+            <span className="truncate">{c.symbol_type || c.node_type}: {c.symbol_name || "unknown"}</span>
           </div>
         ))}
       </div>

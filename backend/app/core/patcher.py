@@ -80,11 +80,10 @@ class SandboxedPatchPilot:
                     f.write("")
 
             # Write the unified diff to a temporary patch file
-            temporary_patch_path = os.path.join(
-                self.workspace_root, "changeset.patch"
-            )
-            with open(temporary_patch_path, "w", encoding="utf-8") as f:
-                f.write(unified_diff_content)
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".patch") as tmp:
+                tmp.write(unified_diff_content)
+                temporary_patch_path = tmp.name
 
             # Apply the patch using the system patch utility
             patch_execution_command = [

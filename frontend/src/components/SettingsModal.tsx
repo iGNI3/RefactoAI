@@ -14,7 +14,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [message, setMessage] = useState("");
 
   // Form State
-  const [geminiKey, setGeminiKey] = useState("");
+  const [googleKey, setGoogleKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [userName, setUserName] = useState("");
@@ -27,7 +27,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       fetch("/api/settings")
         .then((res) => res.json())
         .then((data) => {
-          setGeminiKey(data.gemini_key || "");
+          setGoogleKey(data.google_key || "");
           setOpenaiKey(data.openai_key || "");
           setAnthropicKey(data.anthropic_key || "");
           setUserName(data.user_name || "");
@@ -51,7 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         mcp_custom_cmd: mcpCustomCmd,
       };
 
-      if (!geminiKey.includes("...")) payload.gemini_key = geminiKey;
+      if (!googleKey.includes("...")) payload.google_key = googleKey;
       if (!openaiKey.includes("...")) payload.openai_key = openaiKey;
       if (!anthropicKey.includes("...")) payload.anthropic_key = anthropicKey;
 
@@ -181,8 +181,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <label className="text-[12px] uppercase font-bold opacity-60">Google Gemini API Key</label>
                     <input
                       type="password"
-                      value={geminiKey}
-                      onChange={(e) => setGeminiKey(e.target.value)}
+                      value={googleKey}
+                      onChange={(e) => setGoogleKey(e.target.value)}
                       placeholder="AIzaSy..."
                       className="w-full py-2.5 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-base)] text-[14px] outline-none"
                     />

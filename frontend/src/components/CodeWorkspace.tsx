@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Editor } from "@monaco-editor/react";
+import { InlineComposer } from "./InlineComposer";
 
 interface SearchResult {
   id: string;
@@ -14,7 +15,9 @@ interface SearchResult {
 }
 
 interface CodeWorkspaceProps {
-  results: SearchResult[];
+  results?: SearchResult[];
+  activeFileContent?: string;
+  activeFilePath?: string;
 }
 
 const getLanguage = (filename: string) => {
@@ -28,7 +31,52 @@ const getLanguage = (filename: string) => {
   return "plaintext";
 };
 
-export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({ results }) => {
+export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({ results = [], activeFileContent, activeFilePath }) => {
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsComposerOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  if (activeFileContent !== undefined && activeFilePath !== undefined) {
+    // IDE Mode: Render single file fullscreen
+    return (
+      <div className="relative w-full h-full bg-[#1e1e1e]">
+        <InlineComposer 
+          isOpen={isComposerOpen} 
+          onClose={() => setIsComposerOpen(false)} 
+          onSubmit={(prompt) => {
+            console.log("Inline composer triggered for", activeFilePath, "with prompt:", prompt);
+            // We would pipe this to our backend LLM here
+          }}
+        />
+        <Editor
+          height="100%"
+          language={getLanguage(activeFilePath)}
+          value={activeFileContent}
+          theme="vs-dark"
+          options={{
+            readOnly: false,
+            minimap: { enabled: true },
+            scrollBeyondLastLine: false,
+            fontSize: 14,
+            lineNumbers: "on",
+            wordWrap: "off",
+            padding: { top: 16, bottom: 16 }
+          }}
+        />
+      </div>
+    );
+  }
+
   if (results.length === 0) {
     return (
       <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-black/10 flex flex-col gap-4 mt-2">

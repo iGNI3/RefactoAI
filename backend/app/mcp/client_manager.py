@@ -60,11 +60,16 @@ class MCPMultiServerManager:
                 # Initialize client session
                 session = ClientSession(read_stream, write_stream)
                 await session.__aenter__()
-                await session.initialize()
-
-                self.active_sessions[identifier] = session
-                self.client_contexts[identifier] = client_ctx
-                print(f"Connected to MCP server: '{identifier}'")
+                
+                try:
+                    await session.initialize()
+                    self.active_sessions[identifier] = session
+                    self.client_contexts[identifier] = client_ctx
+                    print(f"Connected to MCP server: '{identifier}'")
+                except Exception as init_err:
+                    await session.__aexit__(None, None, None)
+                    await client_ctx.__aexit__(None, None, None)
+                    raise init_err
             except Exception as connection_err:
                 print(
                     f"Failed to connect to MCP server '{identifier}': "

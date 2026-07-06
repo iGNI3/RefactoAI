@@ -13,15 +13,19 @@ import asyncio
 import time
 from typing import Dict, Any
 
+# Force load .env into os.environ before anything else imports it
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.core.orchestrator import UnifiedModelRouter
+from app.core.dag_orchestrator import DAGOrchestrator
 from app.core.patcher import SandboxedPatchPilot
 from app.mcp.client_manager import MCPMultiServerManager
-from app.parser.document_loader import CodebaseLoader
-from app.vectorstore.chroma_client import ChromaCodeIndexer
+from app.engine.indexer import CodebaseIndexer
 from app.config.settings import settings
 
 
@@ -30,7 +34,7 @@ from app.config.settings import settings
 app = FastAPI(
     title="Autonomous Refactoring Platform Backend",
     description=(
-        "Orchestrates AST parsing, ChromaDB indices, multi-server MCP sessions, "
+        "Orchestrates AST parsing, LanceDB indices, multi-server MCP sessions, "
         "and multi-model routing loops."
     ),
     version="0.1.0",
@@ -40,15 +44,16 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ── Global instances ───────────────────────────────────────────
 router_engine = UnifiedModelRouter()
+dag_engine = DAGOrchestrator()
 mcp_manager = MCPMultiServerManager()
-code_indexer = ChromaCodeIndexer(database_directory=settings.CHROMA_DB_PATH)
+code_indexer = CodebaseIndexer(workspace_root=settings.WORKSPACE_ROOT)
 patch_pilot = SandboxedPatchPilot(
     workspace_directory=settings.WORKSPACE_ROOT,
     max_changed_lines_budget=settings.MAX_DIFF_LINES,
@@ -74,9 +79,12 @@ class PatchRequest(BaseModel):
 from dotenv import set_key
 
 class SettingsRequest(BaseModel):
-    gemini_key: str | None = None
+    google_key: str | None = None
     openai_key: str | None = None
     anthropic_key: str | None = None
+    deepseek_key: str | None = None
+    deepinfra_key: str | None = None
+    openrouter_key: str | None = None
     user_name: str | None = None
     user_email: str | None = None
     mcp_filesystem_enabled: bool | None = None
@@ -146,13 +154,25 @@ async def health_check():
 _startup_time = time.time()
 
 
+@app.get("/api/providers")
+async def get_available_providers():
+    """Returns providers that have a valid API key configured, along with their models."""
+    return router_engine.get_available_providers()
+
+
 @app.get("/api/stats")
 async def get_platform_stats():
     """
-    Returns live platform metrics from ChromaDB and MCP connections.
-    Consumed by the frontend CarouselStats component.
+    Returns live platform metrics from LanceDB and MCP connections.
     """
-    chroma_stats = code_indexer.get_collection_stats()
+    try:
+        # Avoid crashing if table is empty
+        count = len(code_indexer.vector_store.table.search().limit(10).to_list())
+        # For full count, LanceDB v0.3 supports len(table) but let's just do a basic check
+        total_chunks = len(code_indexer.vector_store.table.search().to_arrow()) if count > 0 else 0
+    except Exception:
+        total_chunks = 0
+
     uptime_seconds = int(time.time() - _startup_time)
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, secs = divmod(remainder, 60)
@@ -160,22 +180,21 @@ async def get_platform_stats():
     mcp_count = len(mcp_manager.active_sessions) if hasattr(mcp_manager, "active_sessions") else 0
 
     return {
-        "indexed_files": chroma_stats["indexed_files"],
-        "total_chunks": chroma_stats["total_chunks"],
+        "indexed_files": "auto",
+        "total_chunks": total_chunks,
         "mcp_servers": mcp_count,
         "uptime": f"{hours}h {minutes}m {secs}s",
         "workspace": os.path.abspath(settings.WORKSPACE_ROOT),
     }
 
-
 # ── REST Endpoints ─────────────────────────────────────────────
 
-import tkinter as tk
-from tkinter import filedialog
 from fastapi.concurrency import run_in_threadpool
 
 def _open_directory_dialog():
     try:
+        import tkinter as tk
+        from tkinter import filedialog
         root = tk.Tk()
         root.withdraw()
         root.attributes('-topmost', True)
@@ -199,9 +218,12 @@ async def get_settings():
         return f"{k[:4]}...{k[-4:]}" if k and len(k) > 8 else ("" if not k else "***")
     
     return {
-        "gemini_key": mask_key(os.getenv("GEMINI_API_KEY")),
+        "google_key": mask_key(os.getenv("GOOGLE_API_KEY")),
         "openai_key": mask_key(os.getenv("OPENAI_API_KEY")),
         "anthropic_key": mask_key(os.getenv("ANTHROPIC_API_KEY")),
+        "deepseek_key": mask_key(os.getenv("DEEPSEEK_API_KEY")),
+        "deepinfra_key": mask_key(os.getenv("DEEPINFRA_API_KEY")),
+        "openrouter_key": mask_key(os.getenv("OPENROUTER_API_KEY")),
         "user_name": os.getenv("USER_NAME", ""),
         "user_email": os.getenv("USER_EMAIL", ""),
         "mcp_filesystem_enabled": os.getenv("MCP_FILESYSTEM_ENABLED", "true").lower() == "true",
@@ -213,18 +235,18 @@ async def update_settings(request: SettingsRequest):
     """Updates the .env file with new settings and loads them into memory."""
     env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     
-    # API Keys
-    if request.gemini_key is not None and request.gemini_key.strip() and "..." not in request.gemini_key:
-        set_key(env_path, "GEMINI_API_KEY", request.gemini_key.strip())
-        os.environ["GEMINI_API_KEY"] = request.gemini_key.strip()
-        
-    if request.openai_key is not None and request.openai_key.strip() and "..." not in request.openai_key:
-        set_key(env_path, "OPENAI_API_KEY", request.openai_key.strip())
-        os.environ["OPENAI_API_KEY"] = request.openai_key.strip()
-        
-    if request.anthropic_key is not None and request.anthropic_key.strip() and "..." not in request.anthropic_key:
-        set_key(env_path, "ANTHROPIC_API_KEY", request.anthropic_key.strip())
-        os.environ["ANTHROPIC_API_KEY"] = request.anthropic_key.strip()
+    # API Keys — helper to persist a key
+    def _persist_key(field_val, env_name):
+        if field_val is not None and field_val.strip() and "..." not in field_val:
+            set_key(env_path, env_name, field_val.strip())
+            os.environ[env_name] = field_val.strip()
+    
+    _persist_key(request.google_key, "GOOGLE_API_KEY")
+    _persist_key(request.openai_key, "OPENAI_API_KEY")
+    _persist_key(request.anthropic_key, "ANTHROPIC_API_KEY")
+    _persist_key(request.deepseek_key, "DEEPSEEK_API_KEY")
+    _persist_key(request.deepinfra_key, "DEEPINFRA_API_KEY")
+    _persist_key(request.openrouter_key, "OPENROUTER_API_KEY")
 
     # Profile Settings
     if request.user_name is not None:
@@ -261,28 +283,50 @@ async def update_settings(request: SettingsRequest):
 async def index_workspace(request: IndexRequest):
     """
     Indexes a workspace by discovering source files, parsing them
-    with tree-sitter, and upserting chunks into ChromaDB.
+    with tree-sitter, and upserting chunks into LanceDB.
     """
     workspace = os.path.abspath(request.workspace_path)
     if not os.path.isdir(workspace):
         return {"status": "error", "message": f"Directory not found: {workspace}"}
 
-    loader = CodebaseLoader(workspace_root=workspace)
-    chunks = loader.load_and_chunk_all()
-    count = code_indexer.index_all_chunks(chunks)
-    return {"status": "indexed", "chunks": count}
-
+    # Update indexer workspace root if changed
+    code_indexer.workspace_root = workspace
+    code_indexer.loader.workspace_root = workspace
+    
+    await run_in_threadpool(code_indexer.clear_index)
+    await run_in_threadpool(code_indexer.index_workspace)
+    
+    return {"status": "indexed"}
 
 @app.post("/api/search")
 async def search_codebase(request: SearchRequest):
     """
-    Performs semantic search over indexed code chunks.
+    Performs semantic search over indexed code chunks using LanceDB.
     """
-    results = code_indexer.semantic_code_search(
-        query=request.query,
-        max_results=request.max_results,
-    )
-    return {"results": results}
+    try:
+        raw_results = code_indexer.vector_store.search(
+            query=request.query,
+            limit=request.max_results,
+        )
+        
+        # Format results for the frontend/agent
+        results = []
+        for r in raw_results:
+            results.append({
+                "id": r["id"],
+                "content": r["text"],
+                "metadata": {
+                    "source_file": r["file_path"],
+                    "node_type": r["symbol_type"],
+                    "symbol_name": r["symbol_name"],
+                    "language": r["language"]
+                },
+                "distance": r.get("_distance", 0.0)
+            })
+        return {"results": results}
+    except Exception as e:
+        print(f"Search error: {e}")
+        return {"results": []}
 
 
 @app.get("/api/ast-nodes")
@@ -297,9 +341,10 @@ async def apply_patch(request: PatchRequest):
     """
     Applies a unified diff patch to a file in the sandbox workspace.
     """
-    success, message = patch_pilot.apply_diff_patch(
-        target_relative_path=request.file_path,
-        unified_diff_content=request.diff,
+    success, message = await run_in_threadpool(
+        patch_pilot.apply_diff_patch,
+        request.file_path,
+        request.diff,
     )
     return {"success": success, "message": message}
 
@@ -326,8 +371,21 @@ async def handle_refactor_websocket_stream(websocket: WebSocket):
             thinking_budget = int(payload.get("thinking_budget", 16000))
 
             use_swarm = payload.get("use_swarm", False)
+            command = payload.get("command", "chat")
 
-            if use_swarm:
+            if command == "plan":
+                prompt = payload.get("prompt", "")
+                context = payload.get("context", "")
+                async for update in dag_engine.run_planner(prompt, context):
+                    await websocket.send_json(update)
+                    
+            elif command == "execute_dag":
+                plan_data = payload.get("plan_data", {})
+                context = payload.get("context", "")
+                async for update in dag_engine.execute_dag(plan_data, context):
+                    await websocket.send_json(update)
+                    
+            elif use_swarm:
                 async for update in router_engine.execute_swarm_stream(
                     provider=provider,
                     model_name=model_name,

@@ -5,11 +5,15 @@ import { ConsolePanel } from "./components/ConsolePanel";
 import { ArchitecturePage } from "./components/ArchitecturePage";
 import { HowItWorksPage } from "./components/HowItWorksPage";
 import { SettingsModal } from "./components/SettingsModal";
+import { IDELayout } from "./components/IDELayout";
 
-type AppView = "hero" | "dashboard" | "architecture" | "how-it-works";
+type AppView = "hero" | "dashboard" | "architecture" | "how-it-works" | "ide";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>("hero");
+  const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+  const [currentView, setCurrentView] = useState<AppView>(
+    isElectron ? "ide" : "hero"
+  );
   const [isDark, setIsDark] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -28,6 +32,8 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
+      case "ide":
+        return <IDELayout onBackToHero={() => navigateTo("hero")} />;
       case "dashboard":
         return <ConsolePanel onBackToHero={() => navigateTo("hero")} />;
       case "architecture":

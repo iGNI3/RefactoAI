@@ -8,7 +8,8 @@ import { DiffApprover } from "./DiffApprover";
 import { ArchitectureMap } from "./ArchitectureMap";
 
 interface ConsolePanelProps {
-  onBackToHero: () => void;
+  onBackToHero?: () => void;
+  hideHeader?: boolean;
 }
 
 interface SearchResult {
@@ -23,7 +24,7 @@ interface SearchResult {
   distance: number;
 }
 
-export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero }) => {
+export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHeader }) => {
   const [selectedProvider, setSelectedProvider] = useState("google");
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro");
   const [thinkingBudget, setThinkingBudget] = useState(16000);
@@ -237,26 +238,30 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero }) => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[var(--color-base)] text-[var(--color-contrast)] p-6 sm:p-10 flex flex-col gap-8">
+    <div className={`w-full min-h-screen bg-[var(--color-base)] text-[var(--color-contrast)] ${hideHeader ? 'p-4' : 'p-6 sm:p-10'} flex flex-col gap-8`}>
       {/* Header with back button */}
-      <div className="flex justify-between items-center">
-        <h1
-          className="text-[28px] sm:text-[34px] font-semibold tracking-tight"
-          style={{ fontFamily: "var(--font-heading)" }}
-        >
-          Refactor.ai Dashboard
-        </h1>
-        <button
-          id="btn-back-to-hero"
-          onClick={onBackToHero}
-          className="text-[14px] uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2"
-        >
-          &larr; Back to Home
-        </button>
-      </div>
+      {!hideHeader && (
+        <div className="flex justify-between items-center">
+          <h1
+            className="text-[28px] sm:text-[34px] font-semibold tracking-tight"
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
+            Refactor.ai Dashboard
+          </h1>
+          {onBackToHero && (
+            <button
+              id="btn-back-to-hero"
+              onClick={onBackToHero}
+              className="text-[14px] uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2"
+            >
+              &larr; Back to Home
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Live Statistics Carousel */}
-      <CarouselStats refreshKey={statsRefreshKey} />
+      {!hideHeader && <CarouselStats refreshKey={statsRefreshKey} />}
 
       {/* Index Workspace Section */}
       <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-black/10 flex flex-col sm:flex-row gap-3 items-end">

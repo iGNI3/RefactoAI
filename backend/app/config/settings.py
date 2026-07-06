@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     DEEPSEEK_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
+    DEEPINFRA_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
 
     # ── Workspace & Storage ────────────────────────────────────────
     WORKSPACE_ROOT: str = "./sandbox_workspace"

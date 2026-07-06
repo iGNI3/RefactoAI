@@ -57,7 +57,7 @@ export const CarouselStats: React.FC<CarouselStatsProps> = ({ refreshKey = 0 }) 
         {
           title: "AST Chunks",
           value: stats.total_chunks.toLocaleString(),
-          sub: stats.total_chunks === 0 ? "Index a workspace to begin" : "Stored in ChromaDB",
+          sub: stats.total_chunks === 0 ? "Index a workspace to begin" : "Stored in LanceDB",
         },
         {
           title: "MCP Servers",
