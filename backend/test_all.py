@@ -2,7 +2,6 @@ import os
 import asyncio
 from app.parser.ast_chunker import ASTCodeChunker
 from app.parser.document_loader import CodebaseLoader
-from app.vectorstore.chroma_client import ChromaCodeIndexer
 from app.core.orchestrator import UnifiedModelRouter
 from app.mcp.client_manager import MCPMultiServerManager
 from app.core.patcher import SandboxedPatchPilot
@@ -34,14 +33,7 @@ def test_document_loader():
     assert len(all_chunks) > 0
     print(f"[OK] CodebaseLoader: Discovered {len(files)} files -> {len(all_chunks)} chunks")
 
-def test_chroma():
-    indexer = ChromaCodeIndexer(database_directory="./test_chroma_db")
-    indexer.index_target_file("./app/main.py", workspace_root="./app")
-    results = indexer.semantic_code_search("FastAPI health endpoint", max_results=3)
-    assert len(results) > 0
-    assert "content" in results[0]
-    print(f"[OK] Chroma: Top result distance: {results[0]['distance']:.4f}")
-    indexer.clear_collection()
+
 
 def test_orchestrator():
     router = UnifiedModelRouter()
@@ -63,19 +55,19 @@ def test_patcher():
     except PermissionError:
         pass
     
-    big_diff = "\\n".join([f"+line{i}" for i in range(200)])
+    big_diff = "\n".join([f"+line{i}" for i in range(200)])
     count = pilot.calculate_changed_lines(big_diff)
     assert count == 200
     
     test_file = os.path.join(pilot.workspace_root, "valid.py")
     with open(test_file, "w") as f:
-        f.write("x = 1 + 2\\n")
+        f.write("x = 1 + 2\n")
     valid, msg = pilot.validate_syntax(test_file)
     assert valid
     
     bad_file = os.path.join(pilot.workspace_root, "broken.py")
     with open(bad_file, "w") as f:
-        f.write("def foo(\\n")
+        f.write("def foo(\n")
     valid, msg = pilot.validate_syntax(bad_file)
     assert not valid
     print("[OK] Patcher: verified path boundary, budget, and syntax")
@@ -84,7 +76,6 @@ if __name__ == "__main__":
     os.environ["OPENAI_API_KEY"] = "sk-test"
     test_ast_chunker()
     test_document_loader()
-    test_chroma()
     test_orchestrator()
     test_patcher()
     print("ALL TESTS PASSED!")

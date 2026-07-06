@@ -36,7 +36,7 @@ class AgentStatus(str, Enum):
 @dataclass
 class TaskNode:
     """A single node in the execution DAG."""
-    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
     role: AgentRole = AgentRole.CODER
     title: str = ""
     description: str = ""

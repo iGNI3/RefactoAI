@@ -25,10 +25,10 @@ export default function App() {
     }
   }, [isDark]);
 
-  const navigateTo = (view: AppView) => {
+  const navigateTo = useCallback((view: AppView) => {
     window.scrollTo(0, 0);
     setCurrentView(view);
-  };
+  }, []);
 
   const renderView = () => {
     switch (currentView) {

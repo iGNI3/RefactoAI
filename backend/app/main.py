@@ -11,10 +11,10 @@ import os
 import json
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Any
 
 # Force load .env into os.environ before anything else imports it
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -29,6 +29,15 @@ from app.engine.indexer import CodebaseIndexer
 from app.config.settings import settings
 
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup sequence."""
+    os.makedirs(settings.WORKSPACE_ROOT, exist_ok=True)
+    await reboot_mcp_servers()
+    yield
+
 # ── Application ────────────────────────────────────────────────
 
 app = FastAPI(
@@ -38,6 +47,7 @@ app = FastAPI(
         "and multi-model routing loops."
     ),
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # ── CORS — permissive for local development ────────────────────
@@ -76,7 +86,6 @@ class PatchRequest(BaseModel):
     diff: str
 
 
-from dotenv import set_key
 
 class SettingsRequest(BaseModel):
     google_key: str | None = None
@@ -134,13 +143,7 @@ async def reboot_mcp_servers():
         print(f"MCP initialization error: {err}")
 
 
-@app.on_event("startup")
-async def startup_initialization_routine():
-    """
-    Startup sequence.
-    """
-    os.makedirs(settings.WORKSPACE_ROOT, exist_ok=True)
-    await reboot_mcp_servers()
+
 
 
 # ── Health Check ───────────────────────────────────────────────
@@ -170,7 +173,8 @@ async def get_platform_stats():
         count = len(code_indexer.vector_store.table.search().limit(10).to_list())
         # For full count, LanceDB v0.3 supports len(table) but let's just do a basic check
         total_chunks = len(code_indexer.vector_store.table.search().to_arrow()) if count > 0 else 0
-    except Exception:
+    except Exception as e:
+        print(f"Stats error: {e}")
         total_chunks = 0
 
     uptime_seconds = int(time.time() - _startup_time)
@@ -274,7 +278,6 @@ async def update_settings(request: SettingsRequest):
 
     # Active Control: Reboot MCP if config changed
     if mcp_changed:
-        import asyncio
         asyncio.create_task(reboot_mcp_servers())
 
     return {"status": "success", "message": "Settings updated successfully"}

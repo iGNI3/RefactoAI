@@ -11,7 +11,7 @@ interface IDELayoutProps {
   onBackToHero: () => void;
 }
 
-export const IDELayout: React.FC<IDELayoutProps> = ({ onBackToHero: _onBackToHero }) => {
+export const IDELayout: React.FC<IDELayoutProps> = ({ onBackToHero }) => {
   const [openFiles, setOpenFiles] = useState<{path: string, content: string}[]>([]);
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const [workspacePath, setWorkspacePath] = useState<string | undefined>(undefined);
@@ -99,7 +99,10 @@ export const IDELayout: React.FC<IDELayoutProps> = ({ onBackToHero: _onBackToHer
       {activeView === 'explorer' && (
         <div className="w-[250px] min-w-[250px] h-full flex flex-col bg-[#181818] border-r border-[#333]">
           {/* IDE Header */}
-          <div className="h-[40px] flex items-center px-4 shrink-0">
+          <div className="h-[40px] flex items-center px-4 shrink-0 gap-3">
+            <button onClick={onBackToHero} className="text-[12px] text-white/50 hover:text-white transition-colors" title="Back to Hero">
+              ←
+            </button>
             <span className="text-[12px] font-bold text-white/80">Explorer</span>
           </div>
           <div className="flex-1 overflow-hidden">
@@ -126,12 +129,12 @@ export const IDELayout: React.FC<IDELayoutProps> = ({ onBackToHero: _onBackToHer
                     }`}
                   >
                     {file.path.split('\\').pop()?.split('/').pop()}
-                    <div 
+                    <button 
                       onClick={(e) => closeFile(e, file.path)}
                       className={`w-4 h-4 flex items-center justify-center rounded-sm hover:bg-white/10 ${isSelected ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}
                     >
                       ×
-                    </div>
+                    </button>
                   </div>
                 )
               })

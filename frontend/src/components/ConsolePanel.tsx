@@ -25,6 +25,8 @@ interface SearchResult {
 }
 
 export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHeader }) => {
+  const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+  const API_BASE = isElectron ? "http://localhost:8000" : "";
   const [selectedProvider, setSelectedProvider] = useState("google");
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro");
   const [thinkingBudget, setThinkingBudget] = useState(16000);
@@ -75,7 +77,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHe
   // ── Browse Directory ─────────────────────────────────────────
   const handleBrowse = async () => {
     try {
-      const res = await fetch("/api/browse");
+      const res = await fetch(`${API_BASE}/api/browse`);
       const data = await res.json();
       if (data.path) {
         setWorkspacePath(data.path);
@@ -94,7 +96,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHe
     addLog(`[${ts()}] Discovering source files...`);
 
     try {
-      const res = await fetch("/api/index", {
+      const res = await fetch(`${API_BASE}/api/index`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspace_path: workspacePath }),
@@ -123,7 +125,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHe
     setIsExecuting(true);
 
     try {
-      const res = await fetch("/api/search", {
+      const res = await fetch(`${API_BASE}/api/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userQuery, max_results: 5 }),
@@ -162,7 +164,9 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHe
     setPendingPatch(null);
     contentBufferRef.current = "";
 
-    const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/refactor-stream`;
+    const wsUrl = isElectron 
+      ? "ws://localhost:8000/ws/refactor-stream" 
+      : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/refactor-stream`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -510,7 +514,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({ onBackToHero, hideHe
           onApprove={async (filePath, diff) => {
             addLog(`[${ts()}] SYSTEM Applying patch to ${filePath}...`);
             try {
-              const res = await fetch("/api/patch", {
+              const res = await fetch(`${API_BASE}/api/patch`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ file_path: filePath, diff }),

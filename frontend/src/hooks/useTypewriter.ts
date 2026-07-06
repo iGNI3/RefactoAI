@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * Custom hook that types out text character-by-character.
@@ -14,16 +14,21 @@ export function useTypewriter(
 ) {
   const [displayedText, setDisplayedText] = useState("");
   const [isDone, setIsDone] = useState(false);
+  const currentIdxRef = useRef(0);
 
   useEffect(() => {
-    let currentIdx = 0;
+    if (targetText.length < currentIdxRef.current) {
+        currentIdxRef.current = 0;
+        setDisplayedText("");
+    }
+
     let typingTimer: ReturnType<typeof setInterval> | null = null;
 
     const startTimer = setTimeout(() => {
       typingTimer = setInterval(() => {
-        if (currentIdx < targetText.length) {
-          setDisplayedText((prev) => prev + targetText.charAt(currentIdx));
-          currentIdx++;
+        if (currentIdxRef.current < targetText.length) {
+          setDisplayedText((prev) => prev + targetText.charAt(currentIdxRef.current));
+          currentIdxRef.current++;
         } else {
           setIsDone(true);
           if (typingTimer) clearInterval(typingTimer);
