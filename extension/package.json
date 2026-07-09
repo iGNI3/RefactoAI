@@ -1,0 +1,57 @@
+{
+  "name": "refactor-ai",
+  "displayName": "Refactor.ai",
+  "description": "Autonomous Code Analysis & Refactoring Engine",
+  "version": "0.1.0",
+  "publisher": "refactor-ai",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "refactor-ai.start",
+        "title": "Refactor.ai: Start Pipeline"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "refactor-ai-sidebar",
+          "title": "Refactor.ai",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "refactor-ai-sidebar": [
+        {
+          "type": "webview",
+          "id": "refactor-ai.dashboardView",
+          "name": "Agent Pipeline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@types/node": "20.x",
+    "typescript": "^5.4.5",
+    "ts-loader": "^9.5.1",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {}
+}

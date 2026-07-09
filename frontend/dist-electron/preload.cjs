@@ -1,7 +1,5 @@
-import { createRequire } from "node:module";
-//#endregion
+import { contextBridge, ipcRenderer } from "electron";
 //#region electron/preload.ts
-var { contextBridge, ipcRenderer } = (/* @__PURE__ */ createRequire(import.meta.url))("electron");
 contextBridge.exposeInMainWorld("electronAPI", {
 	readDir: (path) => ipcRenderer.invoke("fs:readDir", path),
 	readFile: (path) => ipcRenderer.invoke("fs:readFile", path),

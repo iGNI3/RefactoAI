@@ -22,7 +22,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChan
   ];
 
   return (
-    <div className="w-[48px] min-w-[48px] h-full bg-[#181818] border-r border-[#333] flex flex-col items-center py-2 justify-between shrink-0">
+    <div className="w-[48px] min-w-[48px] h-full bg-[var(--color-surface)] border-r border-[var(--color-border)] flex flex-col items-center py-2 justify-between shrink-0">
       <div className="flex flex-col items-center gap-4">
         {topIcons.map(({ id, icon: Icon, title }) => {
           const isActive = activeView === id;
@@ -32,7 +32,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChan
               title={title}
               onClick={() => onViewChange(id)}
               className={`relative p-2 cursor-pointer transition-colors ${
-                isActive ? 'text-white' : 'text-white/40 hover:text-white/80'
+                isActive ? 'text-[var(--color-contrast)]' : 'opacity-40 hover:opacity-80'
               }`}
             >
               {isActive && (
@@ -49,7 +49,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChan
           <div 
             key={id}
             title={title}
-            className="p-2 cursor-pointer text-white/40 hover:text-white/80 transition-colors"
+            className="p-2 cursor-pointer opacity-40 hover:opacity-80 transition-colors text-[var(--color-contrast)]"
           >
             <Icon strokeWidth={1.5} size={24} />
           </div>

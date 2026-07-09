@@ -17,19 +17,19 @@ function createWindow() {
       readFile: (path) => ipcRenderer.invoke('fs:readFile', path),
       startTerminal: () => ipcRenderer.send('terminal:start'),
       writeTerminal: (data) => ipcRenderer.send('terminal:write', data),
-      onTerminalData: (callback) => ipcRenderer.on('terminal:data', (event, data) => callback(data)),
-      onWorkspaceChanged: (callback) => ipcRenderer.on('workspace:changed', (event, path) => callback(path)),
-      openFolder: () => ipcRenderer.invoke('dialog:openFolder')
+        onTerminalData: (callback) => {
+          const handler = (event, data) => callback(data);
+          ipcRenderer.on('terminal:data', handler);
+          return () => ipcRenderer.removeListener('terminal:data', handler);
+        },
+        onWorkspaceChanged: (callback) => {
+          const handler = (event, path) => callback(path);
+          ipcRenderer.on('workspace:changed', handler);
+          return () => ipcRenderer.removeListener('workspace:changed', handler);
+        },
+        openFolder: () => ipcRenderer.invoke('dialog:openFolder')
     });
   `);
-	ipcMain.handle("dialog:openFolder", async () => {
-		const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"] });
-		if (!canceled && filePaths.length > 0) {
-			mainWindow?.webContents.send("workspace:changed", filePaths[0]);
-			return filePaths[0];
-		}
-		return null;
-	});
 	mainWindow = new BrowserWindow({
 		width: 1400,
 		height: 900,
@@ -119,6 +119,14 @@ app.whenReady().then(() => {
 			console.error(err);
 			return "";
 		}
+	});
+	ipcMain.handle("dialog:openFolder", async () => {
+		const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"] });
+		if (!canceled && filePaths.length > 0) {
+			mainWindow?.webContents.send("workspace:changed", filePaths[0]);
+			return filePaths[0];
+		}
+		return null;
 	});
 	const menu = Menu.buildFromTemplate([
 		{

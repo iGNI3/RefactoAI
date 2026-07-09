@@ -76,5 +76,9 @@ class SmartModelRouter:
             return ChatOpenAI(model="gpt-4o", openai_api_key=openai_key)
         elif anthropic_key:
             return ChatAnthropic(model="claude-3-5-sonnet-latest", anthropic_api_key=anthropic_key)
+        elif google_key:
+            return ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=google_key)
+        elif deepseek_key:
+            return ChatOpenAI(model="deepseek-chat", openai_api_key=deepseek_key, base_url="https://api.deepseek.com")
         else:
             raise ValueError("No API keys found for model routing.")
